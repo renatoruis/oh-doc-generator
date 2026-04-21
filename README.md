@@ -1,161 +1,101 @@
 # Open Heavens — Guia Open Groups a partir do YouTube
 
-Pipeline da **Open Heavens Church** (Coimbra, Portugal). Lê o vídeo do culto no YouTube, extrai as legendas, **segmenta o culto com Claude** para isolar a ministração, gera um **resumo pastoral em PT-PT e EN**, e produz o **Guia Open Groups** (PDF com identidade visual do manual) — dois ficheiros, um em cada língua.
+Gera dois PDFs (PT + EN) do **Guia Open Groups** a partir de um vídeo de culto no YouTube da [Open Heavens Church](https://openheavenschurch.pt).
 
-> `v0.3` — Saída enxuta: apenas `guia_open_groups_pt.pdf` + `guia_open_groups_en.pdf` na pasta em que o comando é invocado.
+O pipeline extrai as legendas, usa o Claude para isolar a ministração e produzir um resumo pastoral, e compõe o guia com a identidade visual da igreja.
 
-## Porquê segmentar antes de resumir?
+**Plataforma:** macOS (Apple Silicon ou Intel).
 
-A transcrição é do **culto completo** — abertura, louvor, avisos, ofertas, oração, ministração, momento profético, encerramento. Pedir ao modelo para resumir tudo dilui a mensagem central com letras de cânticos e anúncios.
+---
 
-A fase **segmentação** resolve isso:
-
-```mermaid
-flowchart LR
-    URL[URL YouTube] --> T[transcrição YouTube]
-    T --> S["Claude #1<br/>segmentação JSON"]
-    S --> Min[ministração isolada]
-    Min --> R["Claude #2<br/>resumo pastoral"]
-    R --> G[Guia Open Groups PDF (PT + EN)]
-```
-
-## Instalação rápida — `curl | bash`
-
-Não precisas de clonar o repo. A partir de qualquer pasta:
+## Correr (one-liner)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/renatoruis/oh-doc-generator/main/install.sh \
   | bash -s "https://www.youtube.com/live/VIDEO_ID"
 ```
 
-O script faz tudo por ti:
+O script trata de tudo:
 
-1. **Detecta o OS** (macOS / Debian / Fedora / Arch) e verifica dependências.
-2. **Auto-instala o que falta** via `brew` (macOS) ou `apt-get`/`dnf`/`pacman` (Linux):
-   - `git`, `python@3.12`, libs WeasyPrint (Pango, Cairo, Fontconfig, HarfBuzz, …).
-   - No macOS, instala o Homebrew se não existir.
-3. Verifica (e instala opcionalmente) o **`claude` CLI**.
-4. Clona o repositório para `/tmp/oh-XXXXXX/repo`.
-5. Cria um `venv` e instala as dependências Python.
-6. Corre o pipeline (`open-heavens run …`).
-7. Copia **`guia_open_groups_pt.pdf`** e **`guia_open_groups_en.pdf`** para a pasta onde executaste o comando.
-8. Apaga `/tmp/oh-XXXXXX/`.
+1. Instala o Homebrew se faltar.
+2. `brew install` de `git`, `python@3.12` e libs do WeasyPrint (pango, cairo, fontconfig, harfbuzz, gdk-pixbuf, libffi, pkg-config).
+3. Instala o `claude` CLI se faltar.
+4. Clona o repo para `/tmp/oh-XXXX`, cria `venv`, instala o pacote.
+5. Gera o guia.
+6. **Copia `guia_open_groups_pt.pdf` e `guia_open_groups_en.pdf`** para a pasta onde correste o comando.
+7. Limpa `/tmp/oh-XXXX`.
 
-Variáveis opcionais:
+### Variáveis opcionais
 
-| Env var | Default | Efeito |
-|---------|---------|--------|
+| Env var | Default | O que faz |
+|---|---|---|
 | `OH_REPO_BRANCH` | `main` | Branch a clonar |
-| `OH_EXTRA_ARGS` | — | Args extra para `open-heavens run` (ex.: `--skip-segment`) |
-| `OH_KEEP_WORKDIR` | `0` | Mantém `/tmp/oh-…/` para debug |
-| `OH_AUTO_INSTALL` | `1` | Auto-instala deps faltantes |
-| `OH_SKIP_DEPS` | `0` | Salta verificação/instalação automática |
+| `OH_EXTRA_ARGS` | — | Args extra para `open-heavens run` (ex.: `"--skip-segment"`) |
+| `OH_KEEP_WORKDIR` | `0` | `=1` mantém `/tmp/oh-XXXX` para debug |
 
-### Pré-requisitos mínimos (se `OH_AUTO_INSTALL=0`)
+---
 
-- **Python 3.10+**
-- **`claude` CLI** no PATH ([Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code/quickstart)) — sem ele, corre com `OH_EXTRA_ARGS="--skip-claude"` para parar depois da extracção.
-- **WeasyPrint** precisa de Pango / Cairo / Fontconfig instalados:
-  - macOS: `brew install pango cairo fontconfig libffi pkg-config harfbuzz gdk-pixbuf`
-  - Debian/Ubuntu: `sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0 libcairo2 libharfbuzz0b libgdk-pixbuf-2.0-0`
-
-## Instalação local (desenvolvimento)
+## Uso local (desenvolvimento)
 
 ```bash
 git clone https://github.com/renatoruis/oh-doc-generator.git
 cd oh-doc-generator
-python -m venv .venv
-source .venv/bin/activate
+python3.12 -m venv .venv && source .venv/bin/activate
 pip install -e '.[dev]'
-```
 
-Depois:
-
-```bash
 ./main.py "https://www.youtube.com/live/VIDEO_ID"
-# ou
+# equivalente:
 open-heavens run "https://www.youtube.com/live/VIDEO_ID"
 ```
 
-Os dois PDFs aparecem na pasta actual. A pasta de trabalho `./entrega/` é removida no fim.
+Os 2 PDFs aparecem na pasta actual. A pasta de trabalho `./entrega/` é removida no fim (passa `--keep-workdir` para debug).
 
-## Fases do pipeline
+### Flags úteis
 
-```
-[1/5] metadados (yt-dlp)
-[2/5] legendas (youtube-transcript-api)
-[3/5] segmentação do culto (Claude #1)
-[4/5] resumo da ministração (Claude #2)
-[5/5] guias Open Groups (PDF PT + EN → copiados para a pasta actual)
-```
+| Flag | Efeito |
+|---|---|
+| `--skip-claude` | Só extrai legendas (sem resumo → PDFs ficam sem conteúdo útil) |
+| `--skip-segment` | Salta a segmentação (1 chamado Claude a menos; resumo sobre transcrição inteira) |
+| `--force` | Refaz segmentação/resumo ignorando cache |
+| `--keep-workdir` | Mantém `./entrega/<video_id>/` no fim |
+| `-d ./pasta` | Pasta de destino dos PDFs (default: CWD) |
 
-No final, uma **tabela rich** com os PDFs gerados.
-
-## Saída
-
-| Ficheiro | Conteúdo |
-|----------|----------|
-| `guia_open_groups_pt.pdf` | Guia em Português (capa · como usar · resumo · 3 perguntas) |
-| `guia_open_groups_en.pdf` | Mesma estrutura em English |
-
-> A pasta `entrega/` é usada como workdir temporário e **apagada no fim**. Para manter (debug), passa `--keep-workdir` ou `OH_KEEP_WORKDIR=1`.
-
-## Flags úteis
-
-| Flag | O que faz |
-|------|-----------|
-| `--skip-claude` | Só extrai legendas — salta segmentação + resumo |
-| `--skip-segment` | Salta a segmentação; resumo sobre transcrição inteira |
-| `--force` | Refaz segmentação/resumo mesmo com cache local (se `--keep-workdir`) |
-| `--keep-workdir` | Mantém `./entrega/<video_id>/` com todos os artefactos intermédios |
-| `-d ./pasta` | Pasta de destino para os PDFs (default: directório actual) |
-| `-o ./pasta` | Pasta de trabalho (default: `./entrega`; removida no fim) |
-| `--claude-bin` | Caminho alternativo para o `claude` CLI |
-| `--claude-extra "…"` | Argumentos extra (shlex) para o Claude CLI |
-
-## Comandos avançados
+### Testes
 
 ```bash
-open-heavens extract URL           # só transcrição
-open-heavens summarize FILE.json   # resumo via API Anthropic
-open-heavens prepare-claude FILE   # gera prompts para colar no Cursor
-open-heavens ministracao URL       # só segmentação + resumo (sem guia)
-```
-
-## Estrutura do repositório
-
-| Caminho | Conteúdo |
-|---------|----------|
-| `src/youtube_extract/` | Código Python (pipeline, CLI, parsers, render) |
-| `src/youtube_extract/templates/` | Template Jinja2 do guia + prompts |
-| `src/utils/logos/` | Monograma O+H e wordmark (SVG) |
-| `src/utils/fonts/Nohemi/` | Slot para instalar a Nohemi (self-host) |
-| `tests/` | Smoke tests |
-| `install.sh` | Script `curl \| bash` (clone → gerar → copiar → limpar) |
-| `main.py` | Entry simples: `./main.py URL` ou `./main.py <comando>` |
-
-### Nohemi (tipografia oficial)
-
-A **Nohemi** (Pangram Pangram) é a fonte da marca. Como não é livre, não está no repo. Coloca os `.woff2` em `src/utils/fonts/Nohemi/`. Sem eles, o guia faz fallback para **Space Grotesk** (Google Fonts).
-
-## Desenvolvimento
-
-```bash
-pip install -e '.[dev]'
-pre-commit install
 ruff check src tests
 pytest -q
 ```
 
+---
+
+## O que sai
+
+Dois ficheiros A4 paginados, cada um em PT ou EN:
+
+| Página | Conteúdo |
+|---|---|
+| 1 | Capa (obsidian + lime) com título, data e vídeo |
+| 2 | Como usar o guia no Open Group (caixa branca com checklist + fluxo sugerido) |
+| 3+ | Resumo da ministração (tema, contexto, pontos principais, referências bíblicas com links YouVersion, aplicação) |
+| última | 3 perguntas de discussão em cartões numerados |
+
+Rodapé automático em cada página com `Open Heavens Church · <data> | pág. N / M`.
+
+---
+
 ## Requisitos
 
-- **Legendas do vídeo** precisam existir no YouTube. Sem legendas, não há transcrição.
-- **Claude Code CLI** ou `ANTHROPIC_API_KEY` (para a via API).
+- macOS com shell e sudo (para o Homebrew).
+- Legendas existentes no vídeo do YouTube (auto-geradas ou manuais).
+- `claude` CLI autenticado (ou `ANTHROPIC_API_KEY` se quiseres usar a via API — ver `open-heavens summarize`).
 
-## Ajustar os prompts
+---
 
-- [`src/youtube_extract/templates/prompts/segmentacao.md.j2`](src/youtube_extract/templates/prompts/segmentacao.md.j2) — tipos de bloco + schema JSON.
-- [`src/youtube_extract/templates/prompts/ministracao.md.j2`](src/youtube_extract/templates/prompts/ministracao.md.j2) — resumo pastoral PT/EN + perguntas.
+## Licença
+
+- **Código:** [MIT](./LICENSE).
+- **Assets da marca** (logos em `src/utils/logos/`, prompts em `src/youtube_extract/templates/`, constantes em `src/youtube_extract/brand/`): propriedade da Open Heavens Church — uso só com autorização escrita.
 
 ---
 
