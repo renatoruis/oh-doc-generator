@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="{{ html_lang }}">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>{{ title }} — {{ church_name }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="stylesheet" href="{{ google_fonts_url }}"/>
+  <style>
+    /* ───────────── Nohemi self-host (fallback graceful) ───────────── */
+    {% for face in nohemi_faces %}
+    @font-face {
+      font-family: "Nohemi";
+      src: url("{{ face.uri }}") format("woff2");
+      font-weight: {{ face.weight }};
+      font-style: {{ face.style }};
+      font-display: swap;
+    }
+    {% endfor %}
+
+    :root {
+      --obsidian: {{ colors.obsidian }};
+      --green:    {{ colors.green }};
+      --cream:    {{ colors.cream }};
+      --lime:     {{ colors.lime }};
+      --ink:      #1a1a1a;
+      --muted:    #5a5a5a;
+
+      --page-w: 210mm;
+      --page-h: 297mm;
+      --page-pad: 18mm;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: {{ font_body }};
+      color: var(--ink);
+      background: var(--cream);
+      line-height: 1.55;
+      font-size: 11pt;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    /* ───────────── Impressão / PDF ───────────── */
+    @page {
+      size: A4;
+      margin: 0;
+    }
+
+    /* ───────────── Página A4 (cada secção vive numa .page) ───────────── */
+    .page {
+      width: var(--page-w);
+      min-height: var(--page-h);
+      margin: 0 auto;
+      padding: var(--page-pad);
+      background: var(--cream);
+      position: relative;
+      page-break-after: always;
+      break-after: page;
+      overflow: hidden;
+    }
+    .page:last-of-type {
+      page-break-after: auto;
+      break-after: auto;
+    }
+
+    /* ───────────── Capa ───────────── */
+    .cover {
+      background: var(--obsidian);
+      color: var(--cream);
+      padding: 24mm 22mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .cover::before {
+      content: "";
+      position: absolute;
+      top: -20%;
+      right: -30%;
+      width: 120%;
+      height: 180%;
+      background:
+        repeating-linear-gradient(
+          75deg,
+          transparent 0 56px,
+          rgba(192, 223, 22, 0.06) 56px 58px
+        );
+      transform: rotate(-8deg);
+      pointer-events: none;
+    }
+    .cover-watermark {
+      position: absolute;
+      right: -40mm;
+      bottom: -40mm;
+      width: 180mm;
+      height: 180mm;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.10;
+    }
+    .cover-watermark svg { width: 100%; height: 100%; }
+
+    .cover-wordmark {
+      width: 70mm;
+      max-width: 70mm;
+      z-index: 2;
+    }
+    .cover-wordmark svg { width: 100%; height: auto; display: block; }
+
+    .cover-symbol {
+      position: absolute;
+      top: 22mm;
+      right: 22mm;
+      width: 32mm;
+      height: 32mm;
+      z-index: 2;
+    }
+    .cover-symbol svg { width: 100%; height: 100%; display: block; }
+
+    .cover-top, .cover-bottom { position: relative; z-index: 1; }
+
+    .cover-badge {
+      display: inline-block;
+      margin-top: 18mm;
+      padding: 6px 12px;
+      border: 1.5px solid var(--lime);
+      color: var(--lime);
+      font-family: {{ font_heading }};
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-size: 9pt;
+      border-radius: 2px;
+    }
+    .cover-lang {
+      display: inline-block;
+      margin-top: 6mm;
+      margin-left: 6px;
+      padding: 4px 10px;
+      background: var(--lime);
+      color: var(--obsidian);
+      font-family: {{ font_heading }};
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-size: 8pt;
+      border-radius: 2px;
+    }
+
+    .cover h1 {
+      font-family: {{ font_heading }};
+      font-weight: 700;
+      font-size: 42pt;
+      line-height: 1.05;
+      letter-spacing: -0.02em;
+      margin: 10mm 0 6mm 0;
+      color: var(--cream);
+      max-width: 150mm;
+    }
+    .cover .kicker {
+      color: var(--lime);
+      font-family: {{ font_heading }};
+      font-weight: 500;
+      font-size: 12pt;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 6mm;
+    }
+    .cover-meta {
+      font-family: {{ font_body }};
+      font-size: 10pt;
+      color: rgba(242, 235, 231, 0.78);
+      line-height: 1.7;
+      margin-top: 8mm;
+    }
+    .cover-meta strong {
+      color: var(--cream);
+      font-family: {{ font_heading }};
+      font-weight: 600;
+    }
+    .cover-meta .sep {
+      display: inline-block;
+      width: 14px;
+      height: 1.5px;
+      background: var(--lime);
+      vertical-align: middle;
+      margin: 0 8px;
+    }
+    .cover-meta a { color: inherit; text-decoration: underline; }
+
+    .cover-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      font-family: {{ font_body }};
+      font-size: 9pt;
+      color: rgba(242, 235, 231, 0.6);
+    }
+    .cover-footer .tagline { font-style: italic; max-width: 110mm; }
+
+    /* ───────────── Cabeçalho em cada página de conteúdo ───────────── */
+    .page-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 6mm;
+      margin-bottom: 8mm;
+      border-bottom: 1px solid rgba(16,24,32,0.15);
+    }
+    .page-head .logo { width: 42mm; }
+    .page-head .logo svg { width: 100%; height: auto; display: block; }
+    .page-head .meta {
+      font-family: {{ font_heading }};
+      font-size: 8.5pt;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: right;
+      line-height: 1.5;
+    }
+    .page-head .meta strong { color: var(--obsidian); }
+
+    .page-foot {
+      position: absolute;
+      bottom: 10mm;
+      left: var(--page-pad);
+      right: var(--page-pad);
+      display: flex;
+      justify-content: space-between;
+      font-family: {{ font_body }};
+      font-size: 8pt;
+      color: #888;
+    }
+
+    /* ───────────── Título de secção ───────────── */
+    h2.section {
+      font-family: {{ font_heading }};
+      font-weight: 700;
+      font-size: 20pt;
+      letter-spacing: -0.01em;
+      color: var(--obsidian);
+      margin: 0 0 6mm 0;
+      padding-bottom: 6px;
+      border-bottom: 2px solid var(--obsidian);
+    }
+    h2.section::before {
+      content: "";
+      display: inline-block;
+      width: 14px; height: 14px;
+      background: var(--lime);
+      margin-right: 10px;
+      vertical-align: middle;
+      transform: rotate(45deg);
+    }
+
+    /* ───────────── Box "Como usar" ───────────── */
+    .how-to {
+      background: #fff;
+      border-left: 4px solid var(--green);
+      padding: 16px 22px;
+      border-radius: 2px;
+    }
+    .how-to h1, .how-to h2, .how-to h3 {
+      font-family: {{ font_heading }};
+      color: var(--obsidian);
+      margin: 6px 0 6px 0;
+    }
+    .how-to h1 { font-size: 13pt; text-transform: none; letter-spacing: 0; }
+    .how-to h2 { font-size: 11pt; text-transform: uppercase; letter-spacing: 0.04em; color: var(--green); margin-top: 14px; }
+    .how-to table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 4px 0 6px 0;
+      font-size: 9.5pt;
+    }
+    .how-to td, .how-to th {
+      padding: 5px 10px 5px 0;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid rgba(16,24,32,0.06);
+    }
+    .how-to td:first-child,
+    .how-to th:first-child { color: var(--green); font-weight: 600; white-space: nowrap; }
+    .how-to ol, .how-to ul { padding-left: 20px; margin: 4px 0 6px 0; }
+    .how-to li { margin-bottom: 3px; }
+
+    /* ───────────── Conteúdo markdown (resumo) ───────────── */
+    .content h1, .content h2, .content h3, .content h4 {
+      font-family: {{ font_heading }};
+      color: var(--obsidian);
+      page-break-after: avoid;
+    }
+    .content h1 { font-size: 16pt; margin: 10mm 0 3mm; }
+    .content h2 { font-size: 14pt; margin: 8mm 0 3mm; }
+    .content h3 { font-size: 12pt; margin: 6mm 0 2mm; color: var(--green); }
+    .content h4 { font-size: 11pt; margin: 5mm 0 2mm; }
+    .content p  { margin: 0 0 3mm 0; }
+    .content ul, .content ol { padding-left: 18px; margin: 0 0 4mm 0; }
+    .content li { margin-bottom: 2mm; }
+    .content blockquote {
+      border-left: 3px solid var(--lime);
+      margin: 4mm 0;
+      padding: 3mm 5mm;
+      background: rgba(192,223,22,0.10);
+      color: var(--obsidian);
+      font-style: italic;
+    }
+    .content code {
+      font-family: "SFMono-Regular", Menlo, monospace;
+      background: rgba(16,24,32,0.06);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 9.5pt;
+    }
+    .content a { color: var(--green); text-decoration: none; border-bottom: 1px solid rgba(39,159,0,0.3); }
+    .content a:hover { border-bottom-color: var(--green); }
+
+    /* ───────────── Cartões de perguntas Open Groups ───────────── */
+    .qcards {
+      display: flex;
+      flex-direction: column;
+      gap: 8mm;
+      margin: 4mm 0 0 0;
+      counter-reset: qcount;
+    }
+    .qcard {
+      background: #fff;
+      border: 1px solid rgba(16,24,32,0.12);
+      border-left: 6px solid var(--lime);
+      padding: 16px 20px;
+      border-radius: 2px;
+      page-break-inside: avoid;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .qcard .num-circle {
+      counter-increment: qcount;
+      flex: 0 0 auto;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--obsidian);
+      color: var(--lime);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: {{ font_heading }};
+      font-weight: 700;
+      font-size: 14pt;
+    }
+    .qcard .num-circle::before { content: counter(qcount); }
+    .qcard .q {
+      font-family: {{ font_heading }};
+      font-weight: 500;
+      font-size: 13pt;
+      color: var(--obsidian);
+      line-height: 1.35;
+      flex: 1;
+    }
+
+    .disc-intro {
+      color: var(--muted);
+      margin: 0 0 6mm 0;
+      font-size: 10.5pt;
+    }
+
+    .no-summary {
+      font-style: italic;
+      color: var(--muted);
+    }
+
+    footer.doc-footer {
+      margin: 12mm 0 0 0;
+      padding: 6mm 0 0 0;
+      border-top: 1px solid rgba(16,24,32,0.15);
+      font-size: 8.5pt;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    footer.doc-footer strong { color: var(--obsidian); }
+    footer.doc-footer a { color: var(--green); }
+
+    @media screen {
+      body { background: #ddd; padding: 20px 0; }
+      .page {
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        margin: 10px auto;
+      }
+    }
+    @media print {
+      body { background: #fff; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ╔═══════════════════════ PÁGINA 1 — CAPA ═══════════════════════╗ -->
+<section class="page cover">
+  {% if symbol_svg_lime %}
+  <div class="cover-watermark">{{ symbol_svg_lime | safe }}</div>
+  <div class="cover-symbol">{{ symbol_svg_lime | safe }}</div>
+  {% endif %}
+
+  <div class="cover-top">
+    <div class="cover-wordmark">
+      {% if logo_svg_lime %}{{ logo_svg_lime | safe }}{% else %}<strong>{{ church_name }}</strong>{% endif %}
+    </div>
+    <div>
+      <span class="cover-badge">{{ strings.badge }}</span>
+      <span class="cover-lang">{{ strings.lang_label }}</span>
+    </div>
+    <h1>{{ title }}</h1>
+    <div class="kicker">{{ strings.kicker }}</div>
+    <div class="cover-meta">
+      <strong>{{ strings.cult_of }}</strong> {{ cult_date_label }}
+      {% if live_note %}<span class="sep"></span>{{ live_note }}{% endif %}
+      <br>
+      <strong>{{ strings.video }}:</strong> <a href="{{ source_url }}">{{ source_url }}</a>
+    </div>
+  </div>
+  <div class="cover-bottom">
+    <div class="cover-footer">
+      <div class="tagline">“{{ tagline }}”</div>
+      <div>{{ church_website }}<br/>{{ church_instagram }}</div>
+    </div>
+  </div>
+</section>
+
+<!-- ╔═══════════════════════ PÁGINA 2 — COMO USAR ═══════════════════════╗ -->
+{% if como_usar_html %}
+<section class="page">
+  <header class="page-head">
+    <div class="logo">{% if logo_svg_dark %}{{ logo_svg_dark | safe }}{% else %}<strong>{{ church_name }}</strong>{% endif %}</div>
+    <div class="meta"><strong>{{ strings.badge }}</strong><br/>{{ cult_date_label }}</div>
+  </header>
+
+  <h2 class="section">{{ strings.how_to_use }}</h2>
+  <div class="how-to">
+    {{ como_usar_html | safe }}
+  </div>
+
+  <div class="page-foot">
+    <span>{{ church_name }} · {{ cult_date_label }}</span>
+    <span>{{ strings.page }} 2</span>
+  </div>
+</section>
+{% endif %}
+
+<!-- ╔═══════════════════════ PÁGINA 3 — RESUMO DA MINISTRAÇÃO ═══════════════════════╗ -->
+<section class="page">
+  <header class="page-head">
+    <div class="logo">{% if logo_svg_dark %}{{ logo_svg_dark | safe }}{% else %}<strong>{{ church_name }}</strong>{% endif %}</div>
+    <div class="meta"><strong>{{ strings.sermon_summary }}</strong><br/>{{ cult_date_label }}</div>
+  </header>
+
+  <h2 class="section">{{ strings.sermon_summary }}</h2>
+  {% if resumo_html %}
+  <div class="content">
+    {{ resumo_html | safe }}
+  </div>
+  {% else %}
+  <p class="no-summary">{{ strings.no_summary }}</p>
+  {% endif %}
+
+  <div class="page-foot">
+    <span>{{ church_name }} · {{ cult_date_label }}</span>
+    <span>{{ strings.page }} 3</span>
+  </div>
+</section>
+
+<!-- ╔═══════════════════════ PÁGINA FINAL — PERGUNTAS ═══════════════════════╗ -->
+{% if perguntas %}
+<section class="page">
+  <header class="page-head">
+    <div class="logo">{% if logo_svg_dark %}{{ logo_svg_dark | safe }}{% else %}<strong>{{ church_name }}</strong>{% endif %}</div>
+    <div class="meta"><strong>{{ strings.discussion_heading }}</strong><br/>{{ cult_date_label }}</div>
+  </header>
+
+  <h2 class="section">{{ strings.discussion_heading }}</h2>
+  <p class="disc-intro">{{ strings.discussion_intro }}</p>
+
+  <div class="qcards">
+    {% for q in perguntas %}
+    <div class="qcard">
+      <div class="num-circle"></div>
+      <div class="q">{{ q }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <footer class="doc-footer">
+    {{ strings.footer_note | safe }} · {{ strings.video }}: <a href="{{ source_url }}">{{ source_url }}</a> · ID <code>{{ video_id }}</code>.
+  </footer>
+
+  <div class="page-foot">
+    <span>{{ church_name }} · {{ cult_date_label }}</span>
+    <span>{{ strings.page }} 4</span>
+  </div>
+</section>
+{% endif %}
+
+</body>
+</html>
