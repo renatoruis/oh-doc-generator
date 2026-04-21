@@ -346,25 +346,23 @@
     .qcards {
       display: flex;
       flex-direction: column;
-      gap: 8mm;
+      gap: 7mm;
       margin: 4mm 0 0 0;
-      counter-reset: qcount;
     }
     .qcard {
       background: #fff;
-      border: 1px solid rgba(16,24,32,0.12);
-      border-left: 6px solid var(--lime);
-      padding: 16px 20px;
-      border-radius: 2px;
+      border: 1px solid rgba(16,24,32,0.10);
+      border-left: 5px solid var(--lime);
+      padding: 14px 18px 14px 16px;
+      border-radius: 3px;
       page-break-inside: avoid;
       display: flex;
-      gap: 14px;
-      align-items: flex-start;
+      gap: 16px;
+      align-items: stretch;
     }
     .qcard .num-circle {
-      counter-increment: qcount;
       flex: 0 0 auto;
-      width: 36px; height: 36px;
+      width: 38px; height: 38px;
       border-radius: 50%;
       background: var(--obsidian);
       color: var(--lime);
@@ -373,16 +371,31 @@
       justify-content: center;
       font-family: {{ font_heading }};
       font-weight: 700;
-      font-size: 14pt;
+      font-size: 15pt;
+      line-height: 1;
+      align-self: flex-start;
+      margin-top: 2px;
     }
-    .qcard .num-circle::before { content: counter(qcount); }
+    .qcard .qbody {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .qcard .qlabel {
+      font-family: {{ font_heading }};
+      font-size: 8pt;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--green);
+    }
     .qcard .q {
       font-family: {{ font_heading }};
       font-weight: 500;
-      font-size: 13pt;
+      font-size: 12.5pt;
       color: var(--obsidian);
-      line-height: 1.35;
-      flex: 1;
+      line-height: 1.4;
     }
 
     .disc-intro {
@@ -415,7 +428,7 @@
       }
     }
     @media print {
-      body { background: #fff; }
+      body { background: var(--cream); }
     }
   </style>
 </head>
@@ -501,8 +514,11 @@
   <div class="qcards">
     {% for q in perguntas %}
     <div class="qcard">
-      <div class="num-circle"></div>
-      <div class="q">{{ q }}</div>
+      <div class="num-circle">{{ loop.index }}</div>
+      <div class="qbody">
+        <div class="qlabel">{{ strings.q_label }} {{ loop.index }}</div>
+        <div class="q">{{ q }}</div>
+      </div>
     </div>
     {% endfor %}
   </div>

@@ -103,6 +103,7 @@ _STRINGS = {
         "no_summary": "Resumo não disponível — corre o fluxo com Claude para o gerar.",
         "page": "pág.",
         "q_prefix": "Q",
+        "q_label": "Pergunta",
         "footer_note": (
             "Documento gerado para estudo pós-culto e para os "
             "<strong>Open Groups</strong> da <strong>Open Heavens Church</strong>"
@@ -121,6 +122,7 @@ _STRINGS = {
         "no_summary": "Summary not available — run the pipeline with Claude to generate it.",
         "page": "p.",
         "q_prefix": "Q",
+        "q_label": "Question",
         "footer_note": (
             "Document prepared for after-service study and the "
             "<strong>Open Groups</strong> of <strong>Open Heavens Church</strong>"
@@ -308,22 +310,33 @@ def _split_pt_en(content: str) -> tuple[str, str]:
     return "", content[en_match.end():].strip()  # type: ignore[union-attr]
 
 
+# Aceita 3 estilos de "heading" para a secção de perguntas:
+#   ### Open Groups — perguntas para discussão
+#   8. **Open Groups — perguntas para discussão**
+#   **Open Groups — perguntas para discussão**
+_HEADING_PREFIX = r"^(?:#{1,4}\s+|\d+\.\s*\*{0,2}|\*{2})\s*"
+
 _PERGUNTAS_HEADING_PT = re.compile(
-    r"^#{1,4}\s*\d*\.?\s*(?:Open\s*Groups.*?(?:perguntas|discuss|discussão)|Perguntas.*?(?:Open\s*Groups|discuss|grupo))[^\n]*$",
+    _HEADING_PREFIX
+    + r"(?:Open\s*Groups.*?(?:perguntas|discuss|discussão)|Perguntas.*?(?:Open\s*Groups|discuss|grupo))[^\n]*$",
     re.IGNORECASE | re.MULTILINE,
 )
 _PERGUNTAS_HEADING_EN = re.compile(
-    r"^#{1,4}\s*\d*\.?\s*(?:Open\s*Groups.*?(?:discussion|questions)|Discussion.*?questions)[^\n]*$",
+    _HEADING_PREFIX
+    + r"(?:Open\s*Groups.*?(?:discussion|questions)|Discussion.*?questions)[^\n]*$",
     re.IGNORECASE | re.MULTILINE,
 )
 _LIMITACOES_HEADING_PT = re.compile(
-    r"^#{1,4}\s*\d*\.?\s*Limita[çc][õo]es[^\n]*$",
+    _HEADING_PREFIX + r"Limita[çc][õo]es[^\n]*$",
     re.IGNORECASE | re.MULTILINE,
 )
 _LIMITACOES_HEADING_EN = re.compile(
-    r"^#{1,4}\s*\d*\.?\s*Limitations?(?:\s+of\s+the\s+transcript)?[^\n]*$",
+    _HEADING_PREFIX + r"Limitations?(?:\s+of\s+the\s+transcript)?[^\n]*$",
     re.IGNORECASE | re.MULTILINE,
 )
+# "Próximo heading" — apenas markdown headings (## ou ###). Itens numerados
+# (1., 2., 3.) NÃO contam, porque dentro da secção de perguntas é normal ter
+# uma lista numerada `1. ... 2. ... 3. ...`.
 _NEXT_HEADING = re.compile(r"^#{1,4}\s+", re.MULTILINE)
 
 
