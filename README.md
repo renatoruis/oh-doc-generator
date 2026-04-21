@@ -28,23 +28,36 @@ curl -fsSL https://raw.githubusercontent.com/renatoruis/oh-doc-generator/main/in
   | bash -s "https://www.youtube.com/live/VIDEO_ID"
 ```
 
-O script:
+O script faz tudo por ti:
 
-1. Clona o repositório para `/tmp/oh-XXXXXX/repo`.
-2. Cria um `venv` e instala as dependências.
-3. Corre o pipeline (`open-heavens run …`).
-4. Copia **`guia_open_groups_pt.pdf`** e **`guia_open_groups_en.pdf`** para a pasta onde executaste o comando.
-5. Apaga `/tmp/oh-XXXXXX/`.
+1. **Detecta o OS** (macOS / Debian / Fedora / Arch) e verifica dependências.
+2. **Auto-instala o que falta** via `brew` (macOS) ou `apt-get`/`dnf`/`pacman` (Linux):
+   - `git`, `python@3.12`, libs WeasyPrint (Pango, Cairo, Fontconfig, HarfBuzz, …).
+   - No macOS, instala o Homebrew se não existir.
+3. Verifica (e instala opcionalmente) o **`claude` CLI**.
+4. Clona o repositório para `/tmp/oh-XXXXXX/repo`.
+5. Cria um `venv` e instala as dependências Python.
+6. Corre o pipeline (`open-heavens run …`).
+7. Copia **`guia_open_groups_pt.pdf`** e **`guia_open_groups_en.pdf`** para a pasta onde executaste o comando.
+8. Apaga `/tmp/oh-XXXXXX/`.
 
-Variáveis opcionais: `OH_REPO_BRANCH`, `OH_EXTRA_ARGS` (ex.: `--skip-segment`), `OH_KEEP_WORKDIR=1` (debug).
+Variáveis opcionais:
 
-### Pré-requisitos do sistema
+| Env var | Default | Efeito |
+|---------|---------|--------|
+| `OH_REPO_BRANCH` | `main` | Branch a clonar |
+| `OH_EXTRA_ARGS` | — | Args extra para `open-heavens run` (ex.: `--skip-segment`) |
+| `OH_KEEP_WORKDIR` | `0` | Mantém `/tmp/oh-…/` para debug |
+| `OH_AUTO_INSTALL` | `1` | Auto-instala deps faltantes |
+| `OH_SKIP_DEPS` | `0` | Salta verificação/instalação automática |
+
+### Pré-requisitos mínimos (se `OH_AUTO_INSTALL=0`)
 
 - **Python 3.10+**
 - **`claude` CLI** no PATH ([Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code/quickstart)) — sem ele, corre com `OH_EXTRA_ARGS="--skip-claude"` para parar depois da extracção.
 - **WeasyPrint** precisa de Pango / Cairo / Fontconfig instalados:
-  - macOS: `brew install pango cairo fontconfig libffi pkg-config`
-  - Debian/Ubuntu: `sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0 libcairo2 libharfbuzz0b`
+  - macOS: `brew install pango cairo fontconfig libffi pkg-config harfbuzz gdk-pixbuf`
+  - Debian/Ubuntu: `sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0 libcairo2 libharfbuzz0b libgdk-pixbuf-2.0-0`
 
 ## Instalação local (desenvolvimento)
 
