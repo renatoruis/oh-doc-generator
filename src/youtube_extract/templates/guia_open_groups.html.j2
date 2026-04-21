@@ -43,37 +43,62 @@
       text-rendering: optimizeLegibility;
     }
 
-    /* ───────────── Impressão / PDF ───────────── */
+    /* ───────────── Impressão / PDF (CSS Paged Media) ───────────── */
     @page {
       size: A4;
-      margin: 0;
+      margin: 18mm 16mm 22mm 16mm;
+      background: var(--cream);
+
+      @bottom-left {
+        content: "{{ church_name }} · {{ cult_date_label }}";
+        font-family: {{ font_body }};
+        font-size: 8pt;
+        color: #888;
+        padding-top: 4mm;
+      }
+      @bottom-right {
+        content: "{{ strings.page }} " counter(page) " / " counter(pages);
+        font-family: {{ font_body }};
+        font-size: 8pt;
+        color: #888;
+        padding-top: 4mm;
+      }
     }
 
-    /* ───────────── Página A4 (cada secção vive numa .page) ───────────── */
+    /* Capa em página separada, sem margens (fundo obsidian ocupa tudo) */
+    @page cover {
+      margin: 0;
+      background: var(--obsidian);
+      @bottom-left  { content: none; }
+      @bottom-right { content: none; }
+    }
+
+    /* ───────────── Secções ─────────────
+     * .page é apenas um marcador semântico; não impõe altura fixa,
+     * deixa o WeasyPrint paginar o conteúdo por várias A4 físicas
+     * sempre que for preciso. A capa é a excepção.
+     */
     .page {
-      width: var(--page-w);
-      min-height: var(--page-h);
-      margin: 0 auto;
-      padding: var(--page-pad);
       background: var(--cream);
       position: relative;
-      page-break-after: always;
-      break-after: page;
-      overflow: hidden;
     }
-    .page:last-of-type {
-      page-break-after: auto;
-      break-after: auto;
-    }
+    .page + .page { break-before: page; }
+    .page:last-of-type { break-after: auto; }
 
     /* ───────────── Capa ───────────── */
     .cover {
+      page: cover;
+      width: var(--page-w);
+      height: var(--page-h);
+      margin: 0 auto;
       background: var(--obsidian);
       color: var(--cream);
       padding: 24mm 22mm;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      overflow: hidden;
+      break-after: page;
     }
     .cover::before {
       content: "";
@@ -203,7 +228,7 @@
     }
     .cover-footer .tagline { font-style: italic; max-width: 110mm; }
 
-    /* ───────────── Cabeçalho em cada página de conteúdo ───────────── */
+    /* ───────────── Cabeçalho de cada secção ───────────── */
     .page-head {
       display: flex;
       align-items: center;
@@ -211,6 +236,7 @@
       padding-bottom: 6mm;
       margin-bottom: 8mm;
       border-bottom: 1px solid rgba(16,24,32,0.15);
+      break-after: avoid;
     }
     .page-head .logo { width: 42mm; }
     .page-head .logo svg { width: 100%; height: auto; display: block; }
@@ -225,18 +251,6 @@
     }
     .page-head .meta strong { color: var(--obsidian); }
 
-    .page-foot {
-      position: absolute;
-      bottom: 10mm;
-      left: var(--page-pad);
-      right: var(--page-pad);
-      display: flex;
-      justify-content: space-between;
-      font-family: {{ font_body }};
-      font-size: 8pt;
-      color: #888;
-    }
-
     /* ───────────── Título de secção ───────────── */
     h2.section {
       font-family: {{ font_heading }};
@@ -247,6 +261,7 @@
       margin: 0 0 6mm 0;
       padding-bottom: 6px;
       border-bottom: 2px solid var(--obsidian);
+      break-after: avoid;
     }
     h2.section::before {
       content: "";
@@ -262,38 +277,44 @@
     .how-to {
       background: #fff;
       border-left: 4px solid var(--green);
-      padding: 16px 22px;
+      padding: 12px 18px;
       border-radius: 2px;
+      font-size: 10pt;
+      line-height: 1.45;
     }
+    .how-to table, .how-to ol, .how-to ul { break-inside: avoid; }
+    .keep-together { break-inside: avoid-page; }
     .how-to h1, .how-to h2, .how-to h3 {
       font-family: {{ font_heading }};
       color: var(--obsidian);
-      margin: 6px 0 6px 0;
+      margin: 4px 0 4px 0;
     }
-    .how-to h1 { font-size: 13pt; text-transform: none; letter-spacing: 0; }
-    .how-to h2 { font-size: 11pt; text-transform: uppercase; letter-spacing: 0.04em; color: var(--green); margin-top: 14px; }
+    .how-to h1 { font-size: 12pt; text-transform: none; letter-spacing: 0; }
+    .how-to h2 { font-size: 10pt; text-transform: uppercase; letter-spacing: 0.04em; color: var(--green); margin-top: 10px; }
     .how-to table {
       border-collapse: collapse;
       width: 100%;
-      margin: 4px 0 6px 0;
-      font-size: 9.5pt;
+      margin: 3px 0 4px 0;
+      font-size: 9pt;
     }
     .how-to td, .how-to th {
-      padding: 5px 10px 5px 0;
+      padding: 4px 10px 4px 0;
       text-align: left;
       vertical-align: top;
       border-bottom: 1px solid rgba(16,24,32,0.06);
     }
     .how-to td:first-child,
     .how-to th:first-child { color: var(--green); font-weight: 600; white-space: nowrap; }
-    .how-to ol, .how-to ul { padding-left: 20px; margin: 4px 0 6px 0; }
-    .how-to li { margin-bottom: 3px; }
+    .how-to ol, .how-to ul { padding-left: 20px; margin: 3px 0 4px 0; }
+    .how-to li { margin-bottom: 2px; }
 
     /* ───────────── Conteúdo markdown (resumo) ───────────── */
+    .content { orphans: 3; widows: 3; }
     .content h1, .content h2, .content h3, .content h4 {
       font-family: {{ font_heading }};
       color: var(--obsidian);
-      page-break-after: avoid;
+      break-after: avoid;
+      break-inside: avoid;
     }
     .content h1 { font-size: 16pt; margin: 10mm 0 3mm; }
     .content h2 { font-size: 14pt; margin: 8mm 0 3mm; }
@@ -301,7 +322,7 @@
     .content h4 { font-size: 11pt; margin: 5mm 0 2mm; }
     .content p  { margin: 0 0 3mm 0; }
     .content ul, .content ol { padding-left: 18px; margin: 0 0 4mm 0; }
-    .content li { margin-bottom: 2mm; }
+    .content li { margin-bottom: 2mm; break-inside: avoid; }
     .content blockquote {
       border-left: 3px solid var(--lime);
       margin: 4mm 0;
@@ -309,6 +330,7 @@
       background: rgba(192,223,22,0.10);
       color: var(--obsidian);
       font-style: italic;
+      break-inside: avoid;
     }
     .content code {
       font-family: "SFMono-Regular", Menlo, monospace;
@@ -439,14 +461,11 @@
     <div class="meta"><strong>{{ strings.badge }}</strong><br/>{{ cult_date_label }}</div>
   </header>
 
-  <h2 class="section">{{ strings.how_to_use }}</h2>
-  <div class="how-to">
-    {{ como_usar_html | safe }}
-  </div>
-
-  <div class="page-foot">
-    <span>{{ church_name }} · {{ cult_date_label }}</span>
-    <span>{{ strings.page }} 2</span>
+  <div class="keep-together">
+    <h2 class="section">{{ strings.how_to_use }}</h2>
+    <div class="how-to">
+      {{ como_usar_html | safe }}
+    </div>
   </div>
 </section>
 {% endif %}
@@ -466,11 +485,6 @@
   {% else %}
   <p class="no-summary">{{ strings.no_summary }}</p>
   {% endif %}
-
-  <div class="page-foot">
-    <span>{{ church_name }} · {{ cult_date_label }}</span>
-    <span>{{ strings.page }} 3</span>
-  </div>
 </section>
 
 <!-- ╔═══════════════════════ PÁGINA FINAL — PERGUNTAS ═══════════════════════╗ -->
@@ -496,11 +510,6 @@
   <footer class="doc-footer">
     {{ strings.footer_note | safe }} · {{ strings.video }}: <a href="{{ source_url }}">{{ source_url }}</a> · ID <code>{{ video_id }}</code>.
   </footer>
-
-  <div class="page-foot">
-    <span>{{ church_name }} · {{ cult_date_label }}</span>
-    <span>{{ strings.page }} 4</span>
-  </div>
 </section>
 {% endif %}
 
