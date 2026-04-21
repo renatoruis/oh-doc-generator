@@ -21,9 +21,23 @@ _MONTHS_PT = (
     "dezembro",
 )
 
+_MONTHS_EN = (
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+)
 
-def format_cult_date_pt(upload_date: str | None) -> str | None:
-    """Converte YYYYMMDD (yt-dlp) para texto legível em PT."""
+
+def _parse_yyyymmdd(upload_date: str | None) -> tuple[int, int, int] | None:
     if not upload_date or len(upload_date) != 8 or not upload_date.isdigit():
         return None
     y = int(upload_date[:4])
@@ -31,7 +45,25 @@ def format_cult_date_pt(upload_date: str | None) -> str | None:
     d = int(upload_date[6:8])
     if not 1 <= m <= 12 or not 1 <= d <= 31:
         return None
+    return y, m, d
+
+
+def format_cult_date_pt(upload_date: str | None) -> str | None:
+    """Converte YYYYMMDD (yt-dlp) para texto legível em PT."""
+    parsed = _parse_yyyymmdd(upload_date)
+    if not parsed:
+        return None
+    y, m, d = parsed
     return f"{d} de {_MONTHS_PT[m - 1]} de {y}"
+
+
+def format_cult_date_en(upload_date: str | None) -> str | None:
+    """Converte YYYYMMDD para texto legível em EN (ex.: '19 April 2026')."""
+    parsed = _parse_yyyymmdd(upload_date)
+    if not parsed:
+        return None
+    y, m, d = parsed
+    return f"{d} {_MONTHS_EN[m - 1]} {y}"
 
 
 def fetch_youtube_metadata(url: str) -> dict[str, Any]:
@@ -69,6 +101,7 @@ def fetch_youtube_metadata(url: str) -> dict[str, Any]:
         "id": raw.get("id"),
         "upload_date": upload_date,
         "cult_date_label_pt": format_cult_date_pt(upload_date),
+        "cult_date_label_en": format_cult_date_en(upload_date),
         "live_status": raw.get("live_status"),
         "was_live": raw.get("was_live"),
         "duration": raw.get("duration"),

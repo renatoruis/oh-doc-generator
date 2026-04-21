@@ -30,7 +30,12 @@ def _render(lang: str) -> str:
     parsed = parse_resumo(RESUMO_MIN)
     return render_html_str(
         lang=lang,
-        metadata={"title": "Culto teste", "cult_date_label_pt": "1 de janeiro de 2026"},
+        metadata={
+            # título do YouTube em PT — não deve aparecer no PDF EN nem no PT
+            "title": "Celebração de Domingo",
+            "cult_date_label_pt": "1 de janeiro de 2026",
+            "cult_date_label_en": "1 January 2026",
+        },
         parsed=parsed,
         video_id="testid12345",
         source_url="https://example.com/watch?v=testid12345",
@@ -64,3 +69,16 @@ def test_render_produz_pt_e_en_com_4_paginas() -> None:
     # Sem canal
     assert "Riverside" not in pt_text
     assert "Riverside" not in en_text
+
+
+def test_capa_usa_titulo_generico_localizado_e_ignora_titulo_do_video() -> None:
+    pt_text = _render("pt")
+    en_text = _render("en")
+
+    # Título do vídeo YouTube (em PT) não deve aparecer na capa de qualquer idioma
+    assert "Celebração de Domingo" not in pt_text
+    assert "Celebração de Domingo" not in en_text
+
+    # Capa mostra título genérico localizado com a data
+    assert "Culto de 1 de janeiro de 2026" in pt_text
+    assert "Service of 1 January 2026" in en_text

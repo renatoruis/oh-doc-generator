@@ -95,6 +95,7 @@ _STRINGS = {
         "lang_label": "Português",
         "kicker": "Estudo pós-culto para grupos nas casas",
         "cult_of": "Culto de",
+        "cover_title_prefix": "Culto de",
         "video": "Vídeo",
         "how_to_use": "Como usar este guia",
         "sermon_summary": "Resumo da ministração",
@@ -114,6 +115,7 @@ _STRINGS = {
         "lang_label": "English",
         "kicker": "After-service study for home groups",
         "cult_of": "Service of",
+        "cover_title_prefix": "Service of",
         "video": "Video",
         "how_to_use": "How to use this guide",
         "sermon_summary": "Sermon summary",
@@ -440,8 +442,21 @@ def render_html_str(
     )
     template = env.get_template("guia_open_groups.html.j2")
 
-    title = metadata.get("title") or f"Culto — {video_id}"
-    cult_date = metadata.get("cult_date_label_pt") or metadata.get("upload_date") or "—"
+    # Data localizada por idioma (cai de volta para a PT se EN não estiver disponível).
+    if lang == "en":
+        cult_date = (
+            metadata.get("cult_date_label_en")
+            or metadata.get("cult_date_label_pt")
+            or metadata.get("upload_date")
+            or "—"
+        )
+    else:
+        cult_date = (
+            metadata.get("cult_date_label_pt")
+            or metadata.get("upload_date")
+            or "—"
+        )
+
     live_note = ""
     if metadata.get("was_live") or metadata.get("live_status") == "was_live":
         live_note = "Gravação de transmissão em direto." if lang == "pt" else "Recording of a live stream."
@@ -452,6 +467,11 @@ def render_html_str(
     else:
         resumo_html = parsed.pt_html
         perguntas = parsed.perguntas_pt
+
+    strings = dict(_STRINGS[lang])
+    # Título da capa: genérico e localizado, ignora o título do vídeo no YouTube
+    # (que vem em PT e não seria correcto aparecer no PDF em EN).
+    strings["cover_title"] = f"{strings['cover_title_prefix']} {cult_date}"
 
     return template.render(
         html_lang="en" if lang == "en" else "pt-PT",
@@ -469,8 +489,7 @@ def render_html_str(
         symbol_svg_lime=_read_symbol_svg(fill=brand.COLORS["lime"]),
         logo_svg_lime=_read_logo_svg(fill=brand.COLORS["lime"]),
         logo_svg_dark=_read_logo_svg(fill=brand.COLORS["obsidian"]),
-        strings=_STRINGS[lang],
-        title=title,
+        strings=strings,
         cult_date_label=cult_date,
         source_url=source_url,
         video_id=video_id,
