@@ -9,6 +9,12 @@ from pathlib import Path
 
 from requests import Session
 from youtube_transcript_api import FetchedTranscript, YouTubeTranscriptApi
+from youtube_transcript_api._errors import (
+    NoTranscriptFound,
+    TranscriptsDisabled,
+    VideoUnavailable,
+    VideoUnplayable,
+)
 from youtube_transcript_api.formatters import FormatterLoader
 from youtube_transcript_api.proxies import GenericProxyConfig, ProxyConfig
 
@@ -19,6 +25,16 @@ _FORMAT_ALIASES = {
     "vtt": "webvtt",
     "webvtt": "webvtt",
 }
+
+
+class NoCaptionsAvailable(RuntimeError):
+    """Vídeo não tem legendas (manuais ou auto-geradas) — caso de utilizador, não bug."""
+
+    def __init__(self, video_id: str, reason: str, *, original: Exception | None = None) -> None:
+        self.video_id = video_id
+        self.reason = reason
+        self.original = original
+        super().__init__(f"Sem legendas para {video_id}: {reason}")
 
 
 def resolve_format(fmt: str) -> str:
@@ -38,11 +54,32 @@ def fetch_transcript(
     http_client: Session | None = None,
 ) -> FetchedTranscript:
     api = YouTubeTranscriptApi(proxy_config=proxy_config, http_client=http_client)
-    return api.fetch(
-        video_id,
-        languages=languages,
-        preserve_formatting=preserve_formatting,
-    )
+    try:
+        return api.fetch(
+            video_id,
+            languages=languages,
+            preserve_formatting=preserve_formatting,
+        )
+    except TranscriptsDisabled as exc:
+        raise NoCaptionsAvailable(
+            video_id,
+            "O YouTube indica que as legendas estão desativadas ou ainda não foram geradas "
+            "(comum em lives recentes).",
+            original=exc,
+        ) from exc
+    except NoTranscriptFound as exc:
+        raise NoCaptionsAvailable(
+            video_id,
+            f"Não existem legendas nos idiomas pedidos ({', '.join(languages) or '—'}).",
+            original=exc,
+        ) from exc
+    except (VideoUnavailable, VideoUnplayable) as exc:
+        raise NoCaptionsAvailable(
+            video_id,
+            "O vídeo não está disponível/jogável para o YouTube (privado, removido "
+            "ou com restrição regional).",
+            original=exc,
+        ) from exc
 
 
 def format_fetched(transcript: FetchedTranscript, output_format: str) -> str:

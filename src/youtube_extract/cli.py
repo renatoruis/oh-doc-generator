@@ -20,6 +20,7 @@ from youtube_transcript_api import (
 
 from youtube_extract.cookies import session_with_netscape_cookies
 from youtube_extract.extract import (
+    NoCaptionsAvailable,
     fetch_transcript,
     format_fetched,
     list_available_transcripts,
@@ -37,6 +38,8 @@ def _parse_languages(langs: str) -> list[str]:
 
 
 def _friendly_error(exc: BaseException, video_id: str) -> str:
+    if isinstance(exc, NoCaptionsAvailable):
+        return f"Sem legendas para {exc.video_id} — {exc.reason}"
     if isinstance(exc, TranscriptsDisabled):
         return (
             f"O vídeo {video_id} tem legendas desativadas pelo criador. "

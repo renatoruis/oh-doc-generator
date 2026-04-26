@@ -19,11 +19,14 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
+from youtube_extract.extract import NoCaptionsAvailable
 from youtube_extract.ministracao import run_ministracao_workflow
 from youtube_extract.pdf_export import render_open_groups_files
-from youtube_extract.progress import TOTAL_PHASES, final_summary_table, info, phase
+from youtube_extract.progress import TOTAL_PHASES, err, final_summary_table, info, phase
 from youtube_extract.video_id import extract_video_id
 from youtube_extract.youtube_metadata import fetch_youtube_metadata, write_metadata_json
+
+EXIT_NO_CAPTIONS = 2
 
 KNOWN_SUBCOMMANDS = frozenset(
     {"extract", "summarize", "prepare-claude", "ministracao", "help"}
@@ -113,23 +116,39 @@ def run_client_delivery(
         write_metadata_json(meta_path, metadata)
 
     # Fases 2-4 (transcrição, segmentação, resumo) são emitidas pelo workflow.
-    result = run_ministracao_workflow(
-        url_or_id,
-        out_dir=out_dir,
-        languages=languages,
-        include_timestamps=include_timestamps,
-        max_chars=max_chars,
-        cookie_path=cookie_path,
-        proxy_http=proxy_http,
-        proxy_https=proxy_https,
-        skip_claude=skip_claude,
-        skip_segment=skip_segment,
-        force=force,
-        claude_bin=claude_bin,
-        claude_extra=claude_extra,
-        missing_claude_ok=True,
-        show_progress=True,
-    )
+    try:
+        result = run_ministracao_workflow(
+            url_or_id,
+            out_dir=out_dir,
+            languages=languages,
+            include_timestamps=include_timestamps,
+            max_chars=max_chars,
+            cookie_path=cookie_path,
+            proxy_http=proxy_http,
+            proxy_https=proxy_https,
+            skip_claude=skip_claude,
+            skip_segment=skip_segment,
+            force=force,
+            claude_bin=claude_bin,
+            claude_extra=claude_extra,
+            missing_claude_ok=True,
+            show_progress=True,
+        )
+    except NoCaptionsAvailable as exc:
+        err(f"Sem legendas para {exc.video_id} — {exc.reason}")
+        info(f"URL: {source_url}")
+        info(
+            "Sugestões: verifica se o vídeo é público e recente (lives demoram algumas horas "
+            "a gerar legendas automáticas), ou passa outro URL com legendas já disponíveis."
+        )
+        info("Podes confirmar com: yt-dlp --list-subs <URL>")
+        if not keep_workdir:
+            try:
+                if entrega_root.exists() and entrega_root.is_dir():
+                    shutil.rmtree(entrega_root)
+            except Exception:
+                pass
+        return EXIT_NO_CAPTIONS, []
 
     vid = str(result["video_id"])
 
